@@ -51,14 +51,15 @@ constexpr float TILE_SIZE = 64.0f;
 constexpr float EPSILON = 0.0001f;
 
 // configurações do mapa
-constexpr int MAP_WIDTH = 80;
-constexpr int MAP_HEIGHT = 70;
-constexpr int SEED = 42;
+constexpr int MAP_WIDTH  = 72;
+constexpr int MAP_HEIGHT = 54;
+constexpr float MAP_ZOOM = 1.0f;
+constexpr int SEED 		 = 42;
 
 // configuração de tela
 constexpr int FRAME_RATE 		= 60;
-constexpr int RESOLUTION_WIDTH 	= 1100;
-constexpr int RESOLUTION_HEIGHT = 800;
+constexpr int RESOLUTION_WIDTH 	= 800;
+constexpr int RESOLUTION_HEIGHT = 600;
 
 // configuração de player
 constexpr float DEFAULT_PLAYER_SPEED  = 220.0f;
