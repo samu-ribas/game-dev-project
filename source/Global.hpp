@@ -66,7 +66,7 @@ constexpr float DEFAULT_PLAYER_SPEED  = 220.0f;
 constexpr float DEFAULT_PLAYER_VISION = 240.0f; 
 constexpr float DEFAULT_PLAYER_HP 	  = 100.0f;
 
-constexpr float FIXED_DT = 1.0f / 30.0f;
+constexpr float FIXED_DT = 1.0f / 60.0f;
 
 constexpr const char* FLOOR_TEX       = "floor.png";
 constexpr const char* WALL_TEX        = "TileSet.png";

@@ -4,9 +4,9 @@
 #include "TileMap.hpp"
 #include "Dungeon2D.hpp"
 
-void init(Render& render, Dungeon2D& dungeon, TileMap& tileMap);
-void update(float dt);
-void renderFrame(Render& render, TileMap& tileMap);
+bool init(Render& render, Dungeon2D& dungeon, TileMap& tileMap, Player& player);
+void update(TileMap& tileMap, Player& player, Render& render, float dt);
+void renderFrame(Render& render, TileMap& tileMap, Player& player);
 
 int main ()
 {
@@ -16,9 +16,10 @@ int main ()
 	Render render(win);
 	Dungeon2D dungeon(MAP_WIDTH, MAP_HEIGHT);
 	TileMap tileMap;
+	Player player;
 	sf::Clock clock;
 
-	init(render, dungeon, tileMap);
+	if(!init(render, dungeon, tileMap, player))	return -1;
 
 	while(render.getWindow().isOpen())
 	{
@@ -31,33 +32,38 @@ int main ()
 		float dt = (FIXED_DT < elapsed) ? FIXED_DT : elapsed;
 
 		if(dt > 0){
-			update(dt);
+			update(tileMap, player, render, dt);
 		}
-		renderFrame(render, tileMap);
+		renderFrame(render, tileMap, player);
 	}
 
 	return 0;
 }
 
-void init(Render& render, Dungeon2D& dungeon, TileMap& tileMap)
+bool init(Render& render, Dungeon2D& dungeon, TileMap& tileMap, Player& player)
 {
 	render.getWindow().setFramerateLimit(FRAME_RATE);
 	dungeon.generate(SEED);
 	tileMap.loadFromDungeon(dungeon);
+	if(!render.loadResources()) return false;
 
 	int startCol = 0, startRow = 0;
 	tileMap.randomEmptyCell(startCol, startRow);
+	player.body.position = tileMap.toWorld(startCol, startRow);
 	render.setupMapView(MAP_ZOOM);
+	return true;
 }
 
-void update(float dt)
+void update(TileMap& tileMap, Player& player, Render& render, float dt)
 {
-
+	player.handleInput(render, dt);
 }
 
-void renderFrame(Render& render, TileMap& tileMap)
+void renderFrame(Render& render, TileMap& tileMap, Player& player)
 {
+	render.updateCamera(player, tileMap);
 	render.beginFrame();
 	render.drawMap(tileMap);
+	render.drawPlayer(player);
 	render.endFrame();
 }

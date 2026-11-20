@@ -1,30 +1,76 @@
 #include "Render.hpp"
 
-Render::Render(sf::RenderWindow& win) : m_window(win) {}
+Render::Render(sf::RenderWindow& win) : window(win), playerSprite(playerTexture) {}
+
+namespace{
+	float limitRange (float value, float min, float max){
+		if(value < min){
+			return min;
+		}else if(value > max){
+			return max;
+		}
+		return value;
+	}
+}
+
 
 void Render::setupMapView(float zoom)
 {
 	if(zoom == 0) return;
 
-	const sf::Vector2u windowSize = m_window.getSize();
-	m_mapView.setSize({ (float)windowSize.x / zoom, (float)windowSize.y / zoom });
-	m_mapView.setCenter(m_mapView.getSize() * 0.5f);
-	m_window.setView(m_mapView);
+	const sf::Vector2u windowSize = window.getSize();
+	mapView.setSize({ (float)windowSize.x / zoom, (float)windowSize.y / zoom });
+	mapView.setCenter(mapView.getSize() * 0.5f);
+	window.setView(mapView);
 }
 
 sf::RenderWindow& Render::getWindow()
 {
-	return m_window;
+	return window;
+}
+
+bool Render::loadResources(){
+	if (!playerTexture.loadFromFile(PLAYER_TEX)) {
+		return false;
+	}
+	playerSprite.setTexture(playerTexture, true);
+	const sf::Vector2u texSize = playerTexture.getSize();
+	if (texSize.x > 0 && texSize.y > 0) {
+		playerSprite.setOrigin({ texSize.x * 0.5f, texSize.y * 0.5f });
+
+	}
+	return true;
 }
 
 void Render::beginFrame()
 {
-	m_window.clear({100, 0, 0});
+	window.clear({100, 0, 0});
 }
 
-void Render::updateCamera()
+void Render::updateCamera(const Player& player, const TileMap& tileMap)
 {
+	float mapWidth  = (float)tileMap.width()  * TILE_SIZE;
+	float mapHeight = (float)tileMap.height() * TILE_SIZE;
 
+	sf::Vector2f viewSize = mapView.getSize();
+	float halfW = viewSize.x * 0.5f;
+    float halfH = viewSize.y * 0.5f;
+
+	float camX = player.body.position.x;
+	float camY = player.body.position.y;
+
+    if(mapWidth > viewSize.x)
+        camX = limitRange(camX, halfW, mapWidth - halfW);
+    else
+        camX = mapWidth * 0.5f;
+
+    if(mapHeight > viewSize.y)
+        camY = limitRange(camY, halfH, mapHeight - halfH);
+    else
+        camY = mapHeight * 0.5f;
+
+    mapView.setCenter({ camX, camY });
+    window.setView(mapView);
 }
 
 void Render::drawMap(TileMap& tileMap)
@@ -40,13 +86,21 @@ void Render::drawMap(TileMap& tileMap)
 				tile.setFillColor({25, 25, 30});
 			}
 
-			m_window.draw(tile);
+			window.draw(tile);
 		}
 	}
+}
 
+void Render::drawPlayer(Player& player){
+	if(!player.active){
+		return ;
+	}
+	playerSprite.setPosition({ player.body.position.x ,
+                               player.body.position.y });
+	window.draw(playerSprite);
 }
 
 void Render::endFrame()
 {
-	m_window.display();
+	window.display();
 }
