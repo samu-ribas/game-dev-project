@@ -1,0 +1,102 @@
+# SPATIALGRID - Documentation
+
+A game often needs to ask: "which objects are near this point?" The slow way
+is to check every object in the game. SpatialGrid makes this fast. It cuts the
+world into a grid of square cells and remembers which objects are inside each
+cell. To find nearby objects, it looks at a few cells around the point instead
+of the whole map.
+
+
+THE GRID
+
+The world is measured in pixels. The grid is built from three numbers: the
+world width, the world height and the cell size.
+
+    columns = ceil(world width  / cell size)
+    rows    = ceil(world height / cell size)
+
+"ceil" means "round up". It makes sure the last, partly filled column and row
+still get a cell.
+
+Example: the map is 72 x 54 tiles and each tile is 64 pixels, so the world is
+4608 x 3456 pixels. With cells of 256 pixels there are 18 columns and 14 rows
+(3456 / 256 = 13.5, rounded up to 14). That is 252 cells.
+
+Each cell is a list of pointers to entities. All the cells are kept in one
+vector, row after row. The cell at (col, row) is at position:
+
+    index = row * columns + col
+
+The pointers do not own anything. The grid never deletes an entity, so the
+entities must stay alive while the grid points to them.
+
+
+FINDING THE CELL OF A POINT
+
+    col = floor(x / cell size)
+    row = floor(y / cell size)
+
+Then both numbers are clamped, which means pushed into the valid range: col
+from 0 to columns-1, row from 0 to rows-1. A point outside the world is treated
+as if it were in the nearest border cell. So the code can never read outside
+the vector.
+
+An entity is stored in the cell that contains its CENTER (body.position).
+
+
+THE FUNCTIONS
+
+clear()
+    Empties every cell list. The memory is kept, so nothing is allocated again.
+    It also forgets the biggest half-size seen so far.
+
+insert(entity)
+    Puts a pointer to the entity in the cell of its center. Inactive entities
+    (active == false) are skipped. The grid also remembers the largest
+    half-width and half-height it has seen. queryCandidates() needs that.
+
+queryRadius(center, radius, out, ignore)
+    Finds every entity whose center is inside a circle.
+    1. Find the cell of the left/top corner (center - radius) and the cell of
+       the right/bottom corner (center + radius). Together they make a block
+       of cells that covers the circle.
+    2. Visit only the cells in that block.
+    3. For each entity, measure the real distance. The block is a square and
+       the area is a circle, so some entities in the corners are too far.
+       Only the ones inside the radius are kept.
+    "ignore" is an entity to skip, usually the one that is searching, so it
+    does not find itself. The list "out" is cleared first.
+
+nearest(from, ignore)
+    Finds the closest entity when there is no fixed radius. It works in two
+    steps.
+    Step 1: look at square layers around the starting cell. Layer 0 is the
+    cell itself. Layer 1 is the 8 cells around it. Layer 2 is the ring of 16
+    cells around that, and so on. Only the border of each layer is visited,
+    because the inside was already checked. Stop at the first layer that has
+    an entity. If every layer is empty, return null.
+    Step 2: the entity found is not always the closest. A square has corners
+    that are farther away than its sides, so an entity in a diagonal cell
+    could be closer. To be sure, take the distance to the entity found, treat
+    it as a radius, and check every cell that this circle touches. The closest
+    entity seen in that search is the answer.
+
+queryCandidates(box, out)
+    Used for collisions. It returns entities that MIGHT overlap a box. Entities
+    are stored by their center, but a big entity can reach into the next cell.
+    So the box is made bigger by the largest half-size stored, and the cells
+    under the bigger box are collected. The list is a superset: it can hold
+    entities that do not really overlap, so the caller must do the exact test.
+
+
+GOOD TO KNOW
+
+- Call clear() and insert() again every frame after the entities move.
+  CollisionManager::rebuild() does this.
+- Pick a cell size close to the search radius you use most. Here the cell is
+  256 pixels and the player vision is 240 pixels, so one search touches at
+  most 3 x 3 cells.
+- Cells too small mean many empty cells to visit. Cells too big mean many
+  entities in each cell to compare.
+- The grid only knows about entities. It knows nothing about walls. Walls
+  belong to TileMap.

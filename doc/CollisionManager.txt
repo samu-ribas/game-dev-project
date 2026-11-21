@@ -1,0 +1,107 @@
+# COLLISIONMANAGER - Documentation
+
+CollisionManager does two jobs.
+1. It answers questions about entities near each other: who is close, who is
+   the nearest, who is touching. It uses a SpatialGrid to do this quickly.
+2. It moves an entity through the map and stops it at the walls
+   (moveAndSlide).
+
+It owns one SpatialGrid. It is created with the world width and height in
+pixels and the cell size. In Main.cpp:
+
+    CollisionManager collisions(MAP_WIDTH * TILE_SIZE,
+                                MAP_HEIGHT * TILE_SIZE,
+                                GRID_CELL_SIZE);
+
+
+FUNCTIONS
+
+checkCollision(a, b)
+    Takes the bounding box (AABB) of each entity and tests if the two boxes
+    overlap. Boxes that only touch edges count as overlapping.
+
+rebuild(entities)
+    Empties the grid and inserts every entity of the list again. Null
+    pointers and inactive entities are skipped. Call it once per frame, after
+    the entities have moved, so the grid holds their new positions.
+
+findInRadius(center, radius, out, ignore)
+    Fills "out" with the entities that are inside a circle. It simply asks
+    the grid. The list is cleared first, and "ignore" is left out.
+
+findNearest(from, ignore)
+    Returns the closest entity, or null if there is none. It asks the grid.
+
+findCollisions(entity, out)
+    Fills "out" with every entity that touches the given entity. It works in
+    two phases.
+    Broad phase: ask the grid for candidates near the entity's box. This is
+    fast but not exact.
+    Narrow phase: run checkCollision() on each candidate. The entity itself
+    is skipped.
+
+
+MOVEANDSLIDE - MOVING WITHOUT ENTERING WALLS
+
+moveAndSlide(entity, map, dt) moves one entity by one time step and keeps it
+out of the walls. The idea is to move one axis at a time, X first and then Y.
+If an axis hits a wall, only that axis is stopped, so the entity slides along
+the wall instead of sticking to it.
+
+Two small helper functions are used inside the file:
+- isSolid(col, row): true if the cell is a wall. A cell outside the map also
+  counts as a wall, so nothing can leave the world.
+- overlapsWall(box): finds the cells covered by the box (from its top-left
+  corner to its bottom-right corner) and returns true if any is solid. A small
+  box covers only 1 to 4 cells, so this is cheap.
+
+The steps:
+
+Step 0. A safety check. The entity must start the step outside every wall. If
+it does not, the program stops with an assertion message. This usually means
+the body was moved earlier in the same frame, for example integrate() called
+twice.
+
+Step 1. Remember the position, call body.integrate(dt) (the physics moves the
+body), and remember the new position. Now we have "from" and "to".
+
+Step 2. X axis. Put the body at (to.x, from.y) and test the walls. If the box
+overlaps a wall:
+    - moving right: find the column of the box's right edge. Place the body
+      so the right edge sits just before that column.
+    - moving left: find the column of the box's left edge. Place the body so
+      the left edge sits just after that column's right side.
+    Then set the X speed to 0.
+
+Step 3. Y axis. Do the same thing for Y, starting from the corrected X. Use
+the box's bottom edge when moving down and its top edge when moving up.
+
+"Just before the wall" really means COLLISION_SKIN (0.01 pixels) away from
+it. Float numbers are not exact, and without this tiny gap the box could end
+up exactly on the border and count as touching the wall tile.
+
+Why one axis at a time works: the old position was free. Moving only in X
+means the new overlap can only come from the front column. The same is true
+for Y. So the wall to push against is always known.
+
+
+LIMITS AND RULES
+
+- The entity must start outside of walls (step 0 checks this).
+- The movement per axis in one step must be less than one tile (64 pixels).
+  At the player speed of 220 pixels per second and a step of 1/30 second, the
+  move is about 7 pixels, so this is fine.
+- The collision box must be smaller than a tile. Use a half-size of at most
+  0.45 * TILE_SIZE. A box exactly one tile wide touches its neighbor tiles
+  everywhere, and the collision fails.
+- integrate() must be called in only one place: inside moveAndSlide. The
+  player's input code should only set body.velocity.
+
+
+A TYPICAL FRAME
+
+    player.handleInput(render);                  // only sets the velocity
+    collisions.moveAndSlide(player, tileMap, dt);// moves and stops at walls
+    collisions.rebuild(entities);                // grid with new positions
+    collisions.findInRadius(player.body.position,
+                            DEFAULT_PLAYER_VISION, visible, &player);

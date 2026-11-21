@@ -1,0 +1,93 @@
+# RENDER - Documentation
+
+Render draws the game on the screen using SFML. It holds the window, the
+camera (called a "view" in SFML) and the player's picture. Main.cpp does not
+draw anything itself. It tells Render what to do, one call at a time.
+
+
+WHAT IT KEEPS
+
+- window: a reference to the sf::RenderWindow that Main created. Render does
+  not own the window. It only uses it.
+- mapView: the camera. It decides which part of the world is shown.
+- playerTexture and playerSprite: the picture file loaded in memory, and the
+  sprite that is drawn on screen using that picture.
+
+The world is measured in pixels, with Y growing downward. Each tile is 64 x 64
+pixels.
+
+
+THE FUNCTIONS
+
+setupMapView(zoom)
+    Sets the size of the camera to the window size divided by the zoom, puts
+    its center in the middle of that area, and gives it to the window. With
+    zoom 1 the camera shows 800 x 600 world pixels. With zoom 2 it shows half
+    as much, so everything looks twice as big. A zoom of 0 does nothing. Call
+    it once at the start.
+
+getWindow()
+    Returns the window, so Main can poll events and Player can ask if the
+    window has focus.
+
+loadResources()
+    Loads the player's image file (the name comes from PLAYER_TEX). The path
+    is relative to the folder where the game is run. If the file is not found
+    it returns false and Main stops the program. After loading, the sprite
+    origin is set to the middle of the image. That way, when we place the
+    sprite at a position, that position is the CENTER of the picture. This
+    matches the physics, where body.position is the center of the entity.
+
+beginFrame()
+    Clears the window with a dark red color. This starts a new picture.
+
+updateCamera(player, tileMap)
+    Moves the camera to follow the player.
+    1. Compute the map size in pixels (tiles x 64).
+    2. Start with the camera center equal to the player position.
+    3. Limit the center so the camera never shows the area outside the map.
+       If the map is wider than the camera, the center X is kept between half
+       the camera width and (map width - half the camera width). The same is
+       done for Y. If the map is smaller than the camera on an axis, the
+       camera is simply centered on the map.
+    4. Give the camera to the window.
+
+drawMap(tileMap)
+    Draws every tile as a 64 x 64 rectangle. Walls are light gray
+    (60, 60, 70). Free floor is dark (25, 25, 30). At the moment it draws all
+    tiles of the map every frame, even those that are off screen. For a
+    72 x 54 map that is 3888 rectangles. It works, but a later improvement is
+    to draw only the tiles that the camera can see.
+
+drawPlayer(player)
+    Does nothing if the player is not active. Otherwise it scales the sprite
+    so its size matches the player's collision box (2 x half-extents). This
+    way the picture never looks bigger than the box and never seems to enter
+    a wall. Then it places the sprite at the player's position and draws it.
+
+endFrame()
+    Shows the finished picture on screen (window.display()).
+
+
+THE ORDER OF CALLS IN ONE FRAME
+
+    render.updateCamera(player, tileMap);   // 1. move the camera first
+    render.beginFrame();                    // 2. clear the screen
+    render.drawMap(tileMap);                // 3. draw the floor and walls
+    render.drawPlayer(player);              // 4. draw the player on top
+    render.endFrame();                      // 5. show the picture
+
+The camera must be updated BEFORE drawing. If it is updated after the map is
+drawn, the map uses the camera of the previous frame and the player uses the
+new one. They are then out of step, and the player looks like it is shaking.
+Things drawn later appear on top of things drawn earlier, which is why the
+player is drawn after the map.
+
+
+GOOD TO KNOW
+
+- Render only draws. It never changes the position of anything. Movement and
+  collision are done by CollisionManager.
+- Because the sprite follows the collision box, to change the size of the
+  player you change the box (collision.halfExtents in the Player constructor)
+  and the picture follows. Keep the half-size at 0.45 * TILE_SIZE or less.
