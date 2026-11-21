@@ -14,7 +14,7 @@ public:
 	float speed;
 	float hp;
 	
-	void handleInput(Render& render, float dt);
+	void handleInput(Render& render);
 
 };
 

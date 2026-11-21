@@ -56,6 +56,10 @@ constexpr int MAP_HEIGHT = 54;
 constexpr float MAP_ZOOM = 1.0f;
 constexpr int SEED 		 = 42;
 
+//configuração de colisão
+constexpr float COLLISION_SKIN = 0.05f;
+constexpr float GRID_CELL_SIZE = TILE_SIZE * 4.0f;
+
 // configuração de tela
 constexpr int FRAME_RATE 		= 60;
 constexpr int RESOLUTION_WIDTH 	= 800;

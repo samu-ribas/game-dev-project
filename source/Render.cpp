@@ -80,11 +80,10 @@ void Render::drawMap(TileMap& tileMap)
 	for(int row = 0 ; row < tileMap.height() ; row++){
 		for(int col = 0 ; col < tileMap.width() ; col++){
 			tile.setPosition({(float)col * TILE_SIZE , (float)row * TILE_SIZE});
-			if(tileMap.isWall(col, row)){
+			if(tileMap.isWall(col, row))
 				tile.setFillColor({60, 60, 70});
-			}else{
+			else
 				tile.setFillColor({25, 25, 30});
-			}
 
 			window.draw(tile);
 		}
@@ -95,8 +94,12 @@ void Render::drawPlayer(Player& player){
 	if(!player.active){
 		return ;
 	}
-	playerSprite.setPosition({ player.body.position.x ,
-                               player.body.position.y });
+	const sf::Vector2u tex = playerTexture.getSize();
+	if(tex.x > 0 && tex.y > 0){
+		playerSprite.setScale({ 2.f * player.collision.halfExtents.x / (float)tex.x,
+		                        2.f * player.collision.halfExtents.y / (float)tex.y });
+	}
+	playerSprite.setPosition({ player.body.position.x , player.body.position.y });
 	window.draw(playerSprite);
 }
 

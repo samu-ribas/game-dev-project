@@ -1,11 +1,15 @@
 #include <SFML/Graphics.hpp>
+#include <iostream>
+
 #include "Global.hpp"
 #include "Render.hpp"
 #include "TileMap.hpp"
 #include "Dungeon2D.hpp"
+#include "CollisionManager.hpp"
+#include "NPC.hpp"
 
-bool init(Render& render, Dungeon2D& dungeon, TileMap& tileMap, Player& player);
-void update(TileMap& tileMap, Player& player, Render& render, float dt);
+bool init(Render& render, Dungeon2D& dungeon, TileMap& tileMap, Player& player, CollisionManager& colManager);
+void update(TileMap& tileMap, Player& player, Render& render, float dt, CollisionManager& collisions, const std::vector<const Entity*>& entities, std::vector<const Entity*>& visible);
 void renderFrame(Render& render, TileMap& tileMap, Player& player);
 
 int main ()
@@ -18,8 +22,12 @@ int main ()
 	TileMap tileMap;
 	Player player;
 	sf::Clock clock;
+	CollisionManager collisions(MAP_WIDTH * TILE_SIZE, MAP_HEIGHT * TILE_SIZE, GRID_CELL_SIZE);
+	std::vector<const Entity*> entities{ &player };   // + NPCs
+	std::vector<const Entity*> visible;
 
-	if(!init(render, dungeon, tileMap, player))	return -1;
+	if(!init(render, dungeon, tileMap, player, collisions))	return -1;
+
 
 	while(render.getWindow().isOpen())
 	{
@@ -32,7 +40,7 @@ int main ()
 		float dt = (FIXED_DT < elapsed) ? FIXED_DT : elapsed;
 
 		if(dt > 0){
-			update(tileMap, player, render, dt);
+			update(tileMap, player, render, dt, collisions, entities, visible);
 		}
 		renderFrame(render, tileMap, player);
 	}
@@ -40,11 +48,12 @@ int main ()
 	return 0;
 }
 
-bool init(Render& render, Dungeon2D& dungeon, TileMap& tileMap, Player& player)
+bool init(Render& render, Dungeon2D& dungeon, TileMap& tileMap, Player& player, CollisionManager& colManager)
 {
 	render.getWindow().setFramerateLimit(FRAME_RATE);
 	dungeon.generate(SEED);
 	tileMap.loadFromDungeon(dungeon);
+
 	if(!render.loadResources()) return false;
 
 	int startCol = 0, startRow = 0;
@@ -54,9 +63,15 @@ bool init(Render& render, Dungeon2D& dungeon, TileMap& tileMap, Player& player)
 	return true;
 }
 
-void update(TileMap& tileMap, Player& player, Render& render, float dt)
+void update(TileMap& tileMap, Player& player, Render& render, float dt,
+            CollisionManager& collisions,
+            const std::vector<const Entity*>& entities,
+            std::vector<const Entity*>& visible)
 {
-	player.handleInput(render, dt);
+	player.handleInput(render);
+	collisions.moveAndSlide(player, tileMap, dt);
+	collisions.rebuild(entities);
+	collisions.findInRadius(player.body.position, DEFAULT_PLAYER_VISION, visible, &player);
 }
 
 void renderFrame(Render& render, TileMap& tileMap, Player& player)
