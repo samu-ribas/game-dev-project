@@ -1,5 +1,6 @@
 #include "CollisionManager.hpp"
 #include "TileMap.hpp"
+#include "Projectile.hpp"
 #include <cassert>
 #include <cmath>
 
@@ -41,9 +42,15 @@ bool CollisionManager::checkCollision(const Entity& a, const Entity& b) const
 void CollisionManager::rebuild(const std::vector<const Entity*>& entities)
 {
     m_grid.clear();
+    m_entityCount = 0;
+
     for (const Entity* e : entities) {
-        if (e) {
+        if (e && e->active) {
             m_grid.insert(*e);
+            if (m_entityCount < MAX_COLLISION_ENTITIES) {
+                m_entities[m_entityCount] = e;
+                ++m_entityCount;
+            }
         }
     }
 }
@@ -67,6 +74,52 @@ void CollisionManager::findCollisions(const Entity& entity, std::vector<const En
     for (const Entity* other : candidates) {
         if (other != &entity && checkCollision(entity, *other)) {
             out.push_back(other);
+        }
+    }
+}
+
+void CollisionManager::updateProjectile(Projectile& projectile, const TileMap& map,
+                                        float dt, const Entity* owner) const
+{
+    if (!projectile.active || dt <= 0.0f) {
+        return;
+    }
+
+    const Vector2D from = projectile.body.position;
+    projectile.update(dt);
+    if (!projectile.active) {
+        return;
+    }
+
+    // The swept box prevents a fast bullet from crossing a thin object
+    // between two frames without registering a hit.
+    const AABB startBox = projectile.collision.bounds(from);
+    const AABB endBox = projectile.bounds();
+    const AABB sweptBox{
+        {
+            (startBox.min.x < endBox.min.x) ? startBox.min.x : endBox.min.x,
+            (startBox.min.y < endBox.min.y) ? startBox.min.y : endBox.min.y
+        },
+        {
+            (startBox.max.x > endBox.max.x) ? startBox.max.x : endBox.max.x,
+            (startBox.max.y > endBox.max.y) ? startBox.max.y : endBox.max.y
+        }
+    };
+
+    if (overlapsWall(map, sweptBox)) {
+        projectile.deactivate();
+        return;
+    }
+
+    for (int i = 0; i < m_entityCount; ++i) {
+        const Entity* other = m_entities[i];
+        if (!other || other == owner || !other->active) {
+            continue;
+        }
+
+        if (sweptBox.intersects(other->bounds())) {
+            projectile.deactivate();
+            return;
         }
     }
 }

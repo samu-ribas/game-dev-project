@@ -7,6 +7,8 @@
 #include "TileMap.hpp"
 #include <cmath>
 
+class Projectile;
+
 /**
  * @file CollisionManager.hpp
  * @brief Entity-vs-entity queries and collisions, accelerated by a SpatialGrid.
@@ -47,8 +49,18 @@ public:
 
     void moveAndSlide(Entity& entity, const TileMap& map, float dt) const;
 
+    /**
+     * Advances a projectile and deactivates it when it hits a wall or an
+     * active registered entity. @p owner is ignored so the shot cannot hit
+     * the entity that created it.
+     */
+    void updateProjectile(Projectile& projectile, const TileMap& map, float dt,
+                          const Entity* owner = nullptr) const;
+
 private:
     SpatialGrid m_grid;
+    const Entity* m_entities[MAX_COLLISION_ENTITIES]{};
+    int m_entityCount{0};
 };
 
 #endif //GAME_COLLISION_MANAGER

@@ -1,6 +1,13 @@
 #include "Render.hpp"
 
-Render::Render(sf::RenderWindow& win) : window(win), playerSprite(playerTexture) {}
+Render::Render(sf::RenderWindow& win)
+	: window(win)
+	, playerSprite(playerTexture)
+	, projectileShape(BULLET_RADIUS)
+{
+	projectileShape.setOrigin({BULLET_RADIUS, BULLET_RADIUS});
+	projectileShape.setFillColor({255, 220, 80});
+}
 
 namespace{
 	float limitRange (float value, float min, float max){
@@ -101,6 +108,22 @@ void Render::drawPlayer(Player& player){
 	}
 	playerSprite.setPosition({ player.body.position.x , player.body.position.y });
 	window.draw(playerSprite);
+}
+
+void Render::drawProjectiles(const Player& player)
+{
+	for (int i = 0; i < player.projectileCapacity(); ++i) {
+		const Projectile& projectile = player.projectileAt(i);
+		if (!projectile.active) {
+			continue;
+		}
+
+		projectileShape.setPosition({
+			projectile.body.position.x,
+			projectile.body.position.y
+		});
+		window.draw(projectileShape);
+	}
 }
 
 void Render::endFrame()

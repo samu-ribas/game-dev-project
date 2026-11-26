@@ -68,9 +68,12 @@ void update(TileMap& tileMap, Player& player, Render& render, float dt,
             const std::vector<const Entity*>& entities,
             std::vector<const Entity*>& visible)
 {
-	player.handleInput(render);
+	if(render.getWindow().hasFocus()){
+		player.input(render.getWindow());
+	}
 	collisions.moveAndSlide(player, tileMap, dt);
 	collisions.rebuild(entities);
+	player.updateProjectiles(dt, collisions, tileMap);
 	collisions.findInRadius(player.body.position, DEFAULT_PLAYER_VISION, visible, &player);
 }
 
@@ -80,5 +83,6 @@ void renderFrame(Render& render, TileMap& tileMap, Player& player)
 	render.beginFrame();
 	render.drawMap(tileMap);
 	render.drawPlayer(player);
+	render.drawProjectiles(player);
 	render.endFrame();
 }

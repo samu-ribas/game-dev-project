@@ -50,22 +50,29 @@ constexpr float TILE_SIZE = 64.0f;
 /// Tolerance used in floating-point comparisons.
 constexpr float EPSILON = 0.0001f;
 
-// configurações do mapa
+// bullet configuration
+constexpr float BULLET_SPEED    = 500.0f;
+constexpr float BULLET_RADIUS   = 8.0f;
+constexpr float BULLET_LIFETIME = 1.5f;
+constexpr int MAX_PLAYER_PROJECTILES = 32;
+constexpr int MAX_COLLISION_ENTITIES = 256;
+
+// map configuration
 constexpr int MAP_WIDTH  = 72;
 constexpr int MAP_HEIGHT = 54;
 constexpr float MAP_ZOOM = 1.0f;
 constexpr int SEED 		 = 42;
 
-//configuração de colisão
+// collision configuration
 constexpr float COLLISION_SKIN = 0.05f;
 constexpr float GRID_CELL_SIZE = TILE_SIZE * 4.0f;
 
-// configuração de tela
+// screen configuration
 constexpr int FRAME_RATE 		= 60;
 constexpr int RESOLUTION_WIDTH 	= 800;
 constexpr int RESOLUTION_HEIGHT = 600;
 
-// configuração de player
+// player configuration
 constexpr float DEFAULT_PLAYER_SPEED  = 220.0f;
 constexpr float DEFAULT_PLAYER_VISION = 240.0f; 
 constexpr float DEFAULT_PLAYER_HP 	  = 100.0f;

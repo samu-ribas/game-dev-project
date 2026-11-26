@@ -17,6 +17,7 @@ public:
 	void updateCamera(const Player& player, const TileMap& tileMap);
 	void drawMap(TileMap& tileMap);
 	void drawPlayer(Player& player);
+	void drawProjectiles(const Player& player);
 	void endFrame();
 
 private:
@@ -25,6 +26,7 @@ private:
 
 	sf::Texture playerTexture;
 	sf::Sprite playerSprite;
+	sf::CircleShape projectileShape;
 };
 
 #endif //RENDER_HPP
