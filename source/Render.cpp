@@ -1,12 +1,22 @@
 #include "Render.hpp"
 
+#include <string>
+
 Render::Render(sf::RenderWindow& win)
 	: window(win)
 	, playerSprite(playerTexture)
 	, projectileShape(BULLET_RADIUS)
+	, scoreText(scoreFont, "", 24)
+	, scoreSprite(scoreTexture.getTexture())
 {
 	projectileShape.setOrigin({BULLET_RADIUS, BULLET_RADIUS});
 	projectileShape.setFillColor({255, 220, 80});
+
+	hudView = window.getDefaultView();
+	scoreText.setPosition({16.0f, 16.0f});
+	scoreText.setFillColor(sf::Color::White);
+	scoreText.setOutlineColor(sf::Color::Black);
+	scoreText.setOutlineThickness(2.0f);
 }
 
 namespace{
@@ -40,6 +50,16 @@ bool Render::loadResources(){
 	if (!playerTexture.loadFromFile(PLAYER_TEX)) {
 		return false;
 	}
+	if (!scoreFont.openFromFile(MENU_FONT) &&
+		!scoreFont.openFromFile("crazyFont.otf")) {
+		return false;
+	}
+	if (!scoreTexture.resize(window.getSize())) {
+		return false;
+	}
+	// The sprite is constructed before the render texture is resized, so its
+	// default texture rectangle is initially empty. Refresh it after resize.
+	scoreSprite.setTexture(scoreTexture.getTexture(), true);
 	playerSprite.setTexture(playerTexture, true);
 	const sf::Vector2u texSize = playerTexture.getSize();
 	if (texSize.x > 0 && texSize.y > 0) {
@@ -124,6 +144,29 @@ void Render::drawProjectiles(const Player& player)
 		});
 		window.draw(projectileShape);
 	}
+}
+
+void Render::drawScore(int score, float hp)
+{
+	if (scoreNeedsRedraw || score != lastScore || hp != lastHp) {
+		scoreText.setString("hp: " + std::to_string(static_cast<int>(hp)) +
+		                    "   Score: " + std::to_string(score));
+
+		scoreTexture.clear(sf::Color::Transparent);
+		scoreTexture.draw(scoreText);
+		scoreTexture.display();
+
+		lastScore = score;
+		lastHp = hp;
+		scoreNeedsRedraw = false;
+	}
+
+	// The window is cleared every frame, so the cached score image still has
+	// to be composed on the current frame even when its text did not change.
+	window.setView(hudView);
+	scoreSprite.setPosition({0.0f, 0.0f});
+	window.draw(scoreSprite);
+	window.setView(mapView);
 }
 
 void Render::endFrame()

@@ -1,5 +1,4 @@
 #include <SFML/Graphics.hpp>
-#include <iostream>
 
 #include "Global.hpp"
 #include "Render.hpp"
@@ -8,81 +7,89 @@
 #include "CollisionManager.hpp"
 #include "NPC.hpp"
 
-bool init(Render& render, Dungeon2D& dungeon, TileMap& tileMap, Player& player, CollisionManager& colManager);
-void update(TileMap& tileMap, Player& player, Render& render, float dt, CollisionManager& collisions, const std::vector<const Entity*>& entities, std::vector<const Entity*>& visible);
-void renderFrame(Render& render, TileMap& tileMap, Player& player);
+struct GameWorld {
+    Render render;
+    Dungeon2D dungeon;
+    TileMap tileMap;
+    Player player;
+    CollisionManager colManager;
+    int score = 0;
+	
+	GameWorld(sf::RenderWindow& win) 
+        : render(win),
+          dungeon(MAP_WIDTH, MAP_HEIGHT),
+          colManager(MAP_WIDTH * TILE_SIZE, MAP_HEIGHT * TILE_SIZE, GRID_CELL_SIZE) 
+    {}
+};
+
+bool init(GameWorld& world);
+void update(GameWorld& world, float dt, const std::vector<const Entity*>& entities, std::vector<const Entity*>& visible);
+void renderFrame(GameWorld& world);
 
 int main ()
 {
 	sf::RenderWindow win(sf::VideoMode({RESOLUTION_WIDTH, RESOLUTION_HEIGHT}), "SFML window");
-	
-	// instâncias de classes
-	Render render(win);
-	Dungeon2D dungeon(MAP_WIDTH, MAP_HEIGHT);
-	TileMap tileMap;
-	Player player;
 	sf::Clock clock;
-	CollisionManager collisions(MAP_WIDTH * TILE_SIZE, MAP_HEIGHT * TILE_SIZE, GRID_CELL_SIZE);
-	std::vector<const Entity*> entities{ &player };   // + NPCs
+	GameWorld world(win);
+
+	std::vector<const Entity*> entities{ &world.player };   // + NPCs
 	std::vector<const Entity*> visible;
 
-	if(!init(render, dungeon, tileMap, player, collisions))	return -1;
+	if(!init(world))	return -1;
 
 
-	while(render.getWindow().isOpen())
+	while(world.render.getWindow().isOpen())
 	{
-		while(const std::optional event = render.getWindow().pollEvent())
+		while(const std::optional event = world.render.getWindow().pollEvent())
 		{
 			if(event->is<sf::Event::Closed>())
-				render.getWindow().close();
+				world.render.getWindow().close();
 		}
 		const float elapsed = clock.restart().asSeconds();
 		float dt = (FIXED_DT < elapsed) ? FIXED_DT : elapsed;
 
 		if(dt > 0){
-			update(tileMap, player, render, dt, collisions, entities, visible);
+			update(world, dt, entities, visible);
 		}
-		renderFrame(render, tileMap, player);
+		renderFrame(world);
 	}
 
 	return 0;
 }
 
-bool init(Render& render, Dungeon2D& dungeon, TileMap& tileMap, Player& player, CollisionManager& colManager)
+bool init(GameWorld& world)
 {
-	render.getWindow().setFramerateLimit(FRAME_RATE);
-	dungeon.generate(SEED);
-	tileMap.loadFromDungeon(dungeon);
+	world.render.getWindow().setFramerateLimit(FRAME_RATE);
+	world.dungeon.generate(SEED);
+	world.tileMap.loadFromDungeon(world.dungeon);
 
-	if(!render.loadResources()) return false;
+	if(!world.render.loadResources()) return false;
 
 	int startCol = 0, startRow = 0;
-	tileMap.randomEmptyCell(startCol, startRow);
-	player.body.position = tileMap.toWorld(startCol, startRow);
-	render.setupMapView(MAP_ZOOM);
+	world.tileMap.randomEmptyCell(startCol, startRow);
+	world.player.body.position = world.tileMap.toWorld(startCol, startRow);
+	world.render.setupMapView(MAP_ZOOM);
 	return true;
 }
 
-void update(TileMap& tileMap, Player& player, Render& render, float dt,
-            CollisionManager& collisions,
-            const std::vector<const Entity*>& entities,
-            std::vector<const Entity*>& visible)
+void update(GameWorld& world, float dt, const std::vector<const Entity*>& entities, std::vector<const Entity*>& visible)
 {
-	if(render.getWindow().hasFocus()){
-		player.input(render.getWindow());
+	if(world.render.getWindow().hasFocus()){
+		world.player.input(world.render.getWindow());
 	}
-	collisions.moveAndSlide(player, tileMap, dt);
-	collisions.rebuild(entities);
-	player.updateProjectiles(dt, collisions, tileMap);
-	collisions.findInRadius(player.body.position, DEFAULT_PLAYER_VISION, visible, &player);
+	world.colManager.moveAndSlide(world.player, world.tileMap, dt);
+	world.colManager.rebuild(entities);
+	world.player.updateProjectiles(dt, world.colManager, world.tileMap);
+	world.colManager.findInRadius(world.player.body.position, DEFAULT_PLAYER_VISION, visible, &world.player);
 }
 
-void renderFrame(Render& render, TileMap& tileMap, Player& player)
+void renderFrame(GameWorld& world)
 {
-	render.updateCamera(player, tileMap);
-	render.beginFrame();
-	render.drawMap(tileMap);
-	render.drawPlayer(player);
-	render.drawProjectiles(player);
-	render.endFrame();
+	world.render.updateCamera(world.player, world.tileMap);
+	world.render.beginFrame();
+	world.render.drawMap(world.tileMap);
+	world.render.drawPlayer(world.player);
+	world.render.drawProjectiles(world.player);
+	world.render.drawScore(world.score, world.player.hp);
+	world.render.endFrame();
 }
